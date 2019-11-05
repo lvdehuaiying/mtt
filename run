@@ -1,0 +1,7 @@
+export CUDA_VISIBLE_DEVICES='0'
+
+sudo nvidia-smi -i ${CUDA_VISIBLE_DEVICES} -c 0
+python main.py --mtt --gpu --lr 0.4
+sudo nvidia-smi -i ${CUDA_VISIBLE_DEVICES} -c 0
+python main.py --mtt --gpu --lr 0.4
+sudo nvidia-smi -i ${CUDA_VISIBLE_DEVICES} -c 1
