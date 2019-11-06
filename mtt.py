@@ -1,14 +1,21 @@
 from collections import defaultdict
+from collections import Iterable
 from torch.optim import Optimizer
 import torch
 
 class Multipath(Optimizer):
-    def __init__(self, optimizer, m = 2, k = 5, alpha = 0.5):
-        self.optimizer = optimizer
+    def __init__(self, optimizers, m = 2, k = 5, alpha = 0.5):
+        if not isinstance(optimizers, Iterable):
+            self.optimizers = [optimizers for _ in range(m)]
+        else:
+            self.optimizers = list(optimizers)
+
         self.m = m
         self.k = k
         self.alpha = alpha
-        self.param_groups = self.optimizer.param_groups
+        self.opt_p = -1
+
+        self.param_groups = self.optimizers[0].param_groups
         self.slow = dict() 
         self.state = dict()
 
@@ -35,20 +42,18 @@ class Multipath(Optimizer):
 
 
     def step(self, closure=None):
-        loss = self.optimizer.step(closure)
+        loss = self.optimizers[self.opt_p].step(closure)
         for group in self.param_groups:
             cnt = group['counter']
             if cnt % self.k == 0:
                 self.update_state(group)
+                self.opt_p += 1
             if cnt == 0:
                 self.update_slow(group)
+                self.opt_p = 0
             group['counter'] += 1
             if group['counter'] == self.m * self.k:
                 group['counter'] = 0
-
-    def add_param_group(self, param_group):
-        param_group['counter'] = 0
-        self.optimizer.add_param_group(param_group)
 
     def state_dict(self):
         print('!!!!!!state dict!!!!!!')
