@@ -28,10 +28,7 @@ transform_test = transforms.Compose([
 ])
 
 trainset = torchvision.datasets.CIFAR100(root='~/.keras/datasets', train=True, download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
-
 testset = torchvision.datasets.CIFAR100(root='~/.keras/datasets', train=False, download=True, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
 
 # Model
 # net = VGG('VGG19')
@@ -49,7 +46,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False,
 # net = EfficientNetB0()
 
 class cifar_trainer():
-    def __init__(self, device, optimizer_factory, log_dir = None):
+    def __init__(self, device, optimizer_factory, batch_size = 128, log_dir = None):
         self.device = device
 
         print('==> Building model..')
@@ -61,6 +58,9 @@ class cifar_trainer():
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optimizer_factory(list(self.net.parameters()))
 
+        self.trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+        self.testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
+        
         if log_dir is not None:
             self.writer_train, self.writer_test = SummaryWriter('logs/%s/train' % log_dir), SummaryWriter('logs/%s/test' % log_dir)
 
@@ -73,7 +73,7 @@ class cifar_trainer():
         train_loss = 0
         correct = 0
         total = 0
-        for batch_idx, (inputs, targets) in enumerate(trainloader):
+        for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             optimizer.zero_grad()
             outputs = net(inputs)
@@ -86,7 +86,7 @@ class cifar_trainer():
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+            progress_bar(batch_idx, len(self.trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
         return train_loss/(batch_idx+1), 100.*correct/total 
@@ -99,7 +99,7 @@ class cifar_trainer():
         correct = 0
         total = 0
         with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(testloader):
+            for batch_idx, (inputs, targets) in enumerate(self.testloader):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 outputs = net(inputs)
                 loss = self.criterion(outputs, targets)

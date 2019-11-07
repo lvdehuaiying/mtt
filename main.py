@@ -53,6 +53,8 @@ class Mtt_Action(argparse.Action):
             dest.append((option_strings[2:], v))
 for base in base_choices:
     parser.add_argument('--%s'%base, action=Mtt_Action, dest='mtt_bases', type=float, nargs='*')
+#batch_size
+parser.add_argument('--b', default=128, type=int)
 #gpu
 parser.add_argument('--gpu', action='store_true')
 args = parser.parse_args()
@@ -94,7 +96,7 @@ else:
     nums = len(os.listdir('logs'))
 """
 Naming:
-    _mode:'mode'<_opt_ps>_lr:'lr'_dk:'dk'_wd:'wd'
+    _mode:'mode'<_opt_ps>_lr:'lr'_dk:'dk'_wd:'wd'_b:'bs'
 
     <_opt_ps>:
         normal training: qhm:
@@ -118,12 +120,13 @@ def model_name():
     _lr = 'lr:%.0e' % args.lr
     _dk = 'dk:%.0e' % args.dk
     _wd = 'wd:%.0e' % args.weight_decay
+    _b = 'b:%d' % args.b
 
-    return '_%s%s_%s_%s_%s' % (_mode, _opt_ps, _lr, _dk, _wd)
+    return '_%s%s_%s_%s_%s_%s' % (_mode, _opt_ps, _lr, _dk, _wd, _b)
 log_name = 'cifar100%s_%d' % (model_name(), nums)
 
 #trainer initializer
-trainer = pc.cifar_trainer(device, optimizer_factory, log_name)
+trainer = pc.cifar_trainer(device, optimizer_factory, args.b, log_name)
 #learning rate scheduler
 scheduler = optim.lr_scheduler.MultiStepLR(trainer.optimizer, milestones=lr_milestones, gamma=args.dk)
 
