@@ -58,7 +58,7 @@ class cifar_trainer():
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optimizer_factory(list(self.net.parameters()))
 
-        self.trainloader = torch.utils.data.DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
+        self.trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
         self.testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
         
         if log_dir is not None:
