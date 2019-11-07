@@ -83,11 +83,11 @@ if args.resume:
     start_epoch = checkpoint['epoch']
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
+optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-3)
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 60 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 80))
+    lr = args.lr * (0.2 ** (epoch // 60))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
