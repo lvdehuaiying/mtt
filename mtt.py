@@ -4,18 +4,18 @@ from torch.optim import Optimizer
 import torch
 
 class Multipath(Optimizer):
-    def __init__(self, optimizers, m = 2, k = 5, alpha = 0.5):
-        if not isinstance(optimizers, Iterable):
-            self.optimizers = [optimizers for _ in range(m)]
-        else:
-            self.optimizers = list(optimizers)
+    def __init__(self, optimizers, k = 5, alpha = 0.5):
+        self.optimizers = list(optimizers)
 
-        self.m = m
+        self.m = len(optimizers)
         self.k = k
         self.alpha = alpha
         self.opt_p = -1
 
         self.param_groups = self.optimizers[0].param_groups
+        for opt in optimizers:
+            opt.param_groups = self.param_groups
+
         self.slow = dict() 
         self.state = dict()
 
