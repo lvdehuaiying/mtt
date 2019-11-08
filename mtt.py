@@ -4,7 +4,11 @@ from torch.optim import Optimizer
 import torch
 
 class Multipath(Optimizer):
-    def __init__(self, optimizers, k = 5, alpha = 0.5):
+    def __init__(self, optimizers, v_s = None, k = 5, alpha = 0.5):
+        assert(sum(v_s) == 0)
+        assert(max(v_s) <= 1)
+        assert(min(v_s) > 0)
+
         self.optimizers = list(optimizers)
 
         self.m = len(optimizers)
@@ -22,7 +26,11 @@ class Multipath(Optimizer):
         for group in self.param_groups:
             group['counter'] = 0
 
-    def update_state(self, group):
+        self.v_s = v_s
+        if v_s is None:
+            self.v_s = [1 / self.m for _ in range(self.m)]
+
+    def update_state(self, group, v):
          for fast in group['params']:
             if fast not in self.state:
                 self.slow[fast] = torch.zeros_like(fast.data)
@@ -30,7 +38,7 @@ class Multipath(Optimizer):
 
                 self.slow[fast].copy_(fast.data)
             
-            self.state[fast] += (fast.data - self.slow[fast]) * self.alpha / self.m
+            self.state[fast] += (fast.data - self.slow[fast]) * self.alpha * v
             fast.data.copy_(self.slow[fast])
     
     def update_slow(self, group):
@@ -46,7 +54,7 @@ class Multipath(Optimizer):
         for group in self.param_groups:
             cnt = group['counter']
             if cnt % self.k == 0:
-                self.update_state(group)
+                self.update_state(group, self.v_s[self.opt_p])
                 self.opt_p += 1
             if cnt == 0:
                 self.update_slow(group)
