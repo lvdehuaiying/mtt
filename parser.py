@@ -48,9 +48,15 @@ for base in base_choices:
     parser.add_argument('--%s'%base, action=Mtt_Action, dest='mtt_bases', type=float, nargs='*')
 #batch_size
 parser.add_argument('--b', default=128, type=int)
+#lr_milestone
+parser.add_argument('--ms', type=int, nargs='+')
 #gpu
 parser.add_argument('--gpu', action='store_true')
 args = parser.parse_args()
+
+#lr_milestone default
+if args.ms is None:
+    args.ms = [60, 120, 160, 180]
 
 #using optimizer factory
 lr_wd_dict = {'lr':args.lr, 'weight_decay':args.weight_decay}
@@ -95,7 +101,7 @@ Naming:
         mtt:
             _m:'m'_k:'k'_<diff|same>
 """
-def _model_name():
+def get_model_name():
     _mode = 'mode:%s' % args.mode
     if args.mode == 'base':
         _mode = 'mode:%s' % args.opt
@@ -112,7 +118,6 @@ def _model_name():
     _b = 'b:%d' % args.b
 
     return '_%s%s_%s_%s_%s_%s' % (_mode, _opt_ps, _lr, _dk, _wd, _b)
-model_name = _model_name()
 
 if __name__ == '__main__':
     print(args)

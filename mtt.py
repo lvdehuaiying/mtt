@@ -3,9 +3,11 @@ from collections import Iterable
 from torch.optim import Optimizer
 import torch
 
+import math
+
 class Multipath(Optimizer):
     def __init__(self, optimizers, v_s = None, k = 5, alpha = 0.5):
-        assert(sum(v_s) == 0)
+        assert(math.isclose(sum(v_s), 1))
         assert(max(v_s) <= 1)
         assert(min(v_s) > 0)
 
