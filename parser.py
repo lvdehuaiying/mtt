@@ -50,6 +50,9 @@ for base in base_choices:
 parser.add_argument('--b', default=128, type=int)
 #lr_milestone
 parser.add_argument('--ms', type=int, nargs='+')
+parser.add_argument('--total_epoch', type=int, default=200)
+#parameter moving average
+parser.add_argument('--ema', action='store_true')
 #gpu
 parser.add_argument('--gpu', action='store_true')
 args = parser.parse_args()
@@ -116,8 +119,9 @@ def get_model_name():
     _dk = 'dk:%.0e' % args.dk
     _wd = 'wd:%.0e' % args.weight_decay
     _b = 'b:%d' % args.b
+    _ema = 'ema' if args.ema else ''
 
-    return '_%s%s_%s_%s_%s_%s' % (_mode, _opt_ps, _lr, _dk, _wd, _b)
+    return '_%s%s_%s_%s_%s_%s_%s' % (_mode, _opt_ps, _lr, _dk, _wd, _b, _ema)
 
 if __name__ == '__main__':
     print(args)

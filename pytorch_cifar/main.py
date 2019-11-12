@@ -13,6 +13,8 @@ from pytorch_cifar.utils import progress_bar
 
 from torch.utils.tensorboard import SummaryWriter
 
+from ema import ExponentialMovingAverage
+
 # Data
 print('==> Preparing data..')
 transform_train = transforms.Compose([
@@ -46,7 +48,7 @@ testset = torchvision.datasets.CIFAR100(root='~/.keras/datasets', train=False, d
 # net = EfficientNetB0()
 
 class cifar_trainer():
-    def __init__(self, device, optimizer_factory, batch_size = 128, log_dir = None):
+    def __init__(self, device, optimizer_factory, batch_size = 128, log_dir = None, use_ema = False):
         self.device = device
 
         print('==> Building model..')
@@ -57,12 +59,17 @@ class cifar_trainer():
             cudnn.benchmark = True
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optimizer_factory(list(self.net.parameters()))
+        
+        #parameter moving average
+        self.ema = ExponentialMovingAverage(self.optimizer, 0.9) if use_ema else None
 
         self.trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
         self.testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False, num_workers=2)
         
         if log_dir is not None:
             self.writer_train, self.writer_test = SummaryWriter('logs/%s/train' % log_dir), SummaryWriter('logs/%s/test' % log_dir)
+            if use_ema:
+                self.writer_ema = SummaryWriter('logs/%s/ema' % log_dir)
 
     # Training
     def train(self, epoch, optimizer):
@@ -80,6 +87,10 @@ class cifar_trainer():
             loss = self.criterion(outputs, targets)
             loss.backward()
             optimizer.step()
+            
+            #parameters moving average
+            if self.ema is not None:
+                self.ema.update()
 
             train_loss += loss.item()
             _, predicted = outputs.max(1)
@@ -91,7 +102,7 @@ class cifar_trainer():
 
         return train_loss/(batch_idx+1), 100.*correct/total 
 
-    def test(self, epoch, optimizer):
+    def test(self, epoch):
         net = self.net
 
         net.eval()
@@ -118,8 +129,16 @@ class cifar_trainer():
         self.writer_train.add_scalar('loss', train_loss, epoch)
         self.writer_train.add_scalar('accuracy', train_correct, epoch)
 
-        test_loss, test_correct = self.test(epoch,optimizer)
+        test_loss, test_correct = self.test(epoch)
         self.writer_test.add_scalar('accuracy', test_correct, epoch)
         self.writer_test.add_scalar('loss', test_loss, epoch)
         print('Acc: %.4f%% | Loss: %.3f' % (test_correct, test_loss))
+        
+        if self.ema is not None:
+            ema.apply_state()
 
+            ema_loss, ema_correct = self.test(epoch)
+            self.writer_ema.add_scalar('accuracy', ema_correct, epoch)
+            self.writer_ema.add_scalar('loss', ema_loss, epoch)
+
+            ema.restore()

@@ -18,11 +18,11 @@ else:
 log_name = 'cifar100%s_%d' % (get_model_name(), nums)
 
 #trainer initializer
-trainer = pc.cifar_trainer(device, optimizer_factory, args.b, log_name)
+trainer = pc.cifar_trainer(device, optimizer_factory, args.b, log_name, args.ema)
 #learning rate scheduler
 scheduler = optim.lr_scheduler.MultiStepLR(trainer.optimizer, milestones=args.ms, gamma=args.dk)
 
 if __name__ == '__main__':
-    for epoch in range(200):
+    for epoch in range(args.total_epoch):
         trainer.train_one_epoch(epoch)
         scheduler.step()
