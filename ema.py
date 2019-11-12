@@ -33,4 +33,4 @@ class ExponentialMovingAverage():
                 assert(p in self.backup)
 
                 p.data = self.backup[p]
-                self.backup = {}
+        self.backup = {}

@@ -135,10 +135,10 @@ class cifar_trainer():
         print('Acc: %.4f%% | Loss: %.3f' % (test_correct, test_loss))
         
         if self.ema is not None:
-            ema.apply_state()
+            self.ema.apply_state()
 
             ema_loss, ema_correct = self.test(epoch)
             self.writer_ema.add_scalar('accuracy', ema_correct, epoch)
             self.writer_ema.add_scalar('loss', ema_loss, epoch)
 
-            ema.restore()
+            self.ema.restore()
