@@ -46,6 +46,8 @@ class Mtt_Action(argparse.Action):
             dest.append((option_strings[2:], v))
 for base in base_choices:
     parser.add_argument('--%s'%base, action=Mtt_Action, dest='mtt_bases', type=float, nargs='*')
+#mtt_dataload
+parser.add_argument('--mtt_data_repeat', action='store_true')
 #batch_size
 parser.add_argument('--b', default=128, type=int)
 #lr_milestone
@@ -113,7 +115,7 @@ def get_model_name():
     if args.mode == 'lookahead':
         _opt_ps = '_k:%d_%s' % (args.k, args.opt)
     elif args.mode == 'mtt':
-        _opt_ps = '_m:%d_k:%d_%s' % (len(args.mtt_bases), args.k, 'same' if args.m != 0 else 'diff')
+        _opt_ps = '_m:%d_k:%d_%s%s' % (len(args.mtt_bases), args.k, 'same' if args.m != 0 else 'diff', '_repeat' if args.mtt_data_repeat else '')
 
     _lr = 'lr:%.0e' % args.lr
     _dk = 'dk:%.0e' % args.dk

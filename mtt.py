@@ -16,7 +16,7 @@ class Multipath(Optimizer):
         self.m = len(optimizers)
         self.k = k
         self.alpha = alpha
-        self.opt_p = -1
+        self.opt_p = 0
 
         self.param_groups = self.optimizers[0].param_groups
         for opt in optimizers:
@@ -28,17 +28,17 @@ class Multipath(Optimizer):
         for group in self.param_groups:
             group['counter'] = 0
 
+            for fast in group['params']:
+                self.state[fast] = torch.zeros_like(fast)
+                self.slow[fast] = torch.clone(fast).detach()
+
         self.v_s = v_s
         if v_s is None:
             self.v_s = [1 / self.m for _ in range(self.m)]
 
     def update_state(self, group, v):
-         for fast in group['params']:
-            if fast not in self.state:
-                self.slow[fast] = torch.zeros_like(fast.data)
-                self.state[fast] = torch.zeros_like(fast.data)
-
-                self.slow[fast].copy_(fast.data)
+        for fast in group['params']:
+            assert(fast in self.state)
             
             self.state[fast] += (fast.data - self.slow[fast]) * self.alpha * v
             fast.data.copy_(self.slow[fast])
@@ -54,16 +54,14 @@ class Multipath(Optimizer):
     def step(self, closure=None):
         loss = self.optimizers[self.opt_p].step(closure)
         for group in self.param_groups:
+            group['counter'] += 1
             cnt = group['counter']
             if cnt % self.k == 0:
                 self.update_state(group, self.v_s[self.opt_p])
                 self.opt_p += 1
-            if cnt == 0:
+            if group['counter'] == self.m * self.k:
                 self.update_slow(group)
                 self.opt_p = 0
-            group['counter'] += 1
-            if group['counter'] == self.m * self.k:
                 group['counter'] = 0
 
-    def state_dict(self):
-        print('!!!!!!state dict!!!!!!')
+

@@ -48,8 +48,10 @@ testset = torchvision.datasets.CIFAR100(root='~/.keras/datasets', train=False, d
 # net = EfficientNetB0()
 
 class cifar_trainer():
-    def __init__(self, device, optimizer_factory, batch_size = 128, log_dir = None, use_ema = False):
+    def __init__(self, device, optimizer_factory, batch_size = 128, log_dir = None, use_ema = False, m = 1, k = 0):
         self.device = device
+        self.m = m
+        self.k = k
 
         print('==> Building model..')
         self.net = ResNet(BasicBlock, [2,2,2,2], num_classes = 100)
@@ -72,22 +74,29 @@ class cifar_trainer():
                 self.writer_ema = SummaryWriter('logs/%s/ema' % log_dir)
 
     # Training
-    def train(self, epoch, optimizer):
+    def _train_step(self, inputs, targets):
+        self.optimizer.zero_grad()
+        outputs = self.net(inputs)
+        loss = self.criterion(outputs, targets)
+        loss.backward()
+        self.optimizer.step()
+
+        return outputs, loss
+
+    def train(self, epoch):
         print('\nEpoch: %d' % epoch)
         
-        net = self.net
-        net.train()
+        self.net.train()
         train_loss = 0
         correct = 0
         total = 0
+
+        #mtt dataloader repetition
+        self.rep_data = []
         for batch_idx, (inputs, targets) in enumerate(self.trainloader):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
-            optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = self.criterion(outputs, targets)
-            loss.backward()
-            optimizer.step()
-            
+            outputs, loss = self._train_step(inputs, targets)
+
             #parameters moving average
             if self.ema is not None:
                 self.ema.update()
@@ -99,6 +108,16 @@ class cifar_trainer():
 
             progress_bar(batch_idx, len(self.trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                 % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            
+            if self.m <= 1:
+                continue
+            #mtt repetition
+            self.rep_data.append((inputs, targets))
+            if len(self.rep_data) == self.k:
+                for _ in range(self.m - 1):
+                    for inputs, targets in self.rep_data:
+                        self._train_step(inputs, targets)
+                self.rep_data = []
 
         return train_loss/(batch_idx+1), 100.*correct/total 
 
@@ -124,8 +143,7 @@ class cifar_trainer():
 
 
     def train_one_epoch(self, epoch):
-        optimizer = self.optimizer
-        train_loss, train_correct = self.train(epoch,optimizer)
+        train_loss, train_correct = self.train(epoch)
         self.writer_train.add_scalar('loss', train_loss, epoch)
         self.writer_train.add_scalar('accuracy', train_correct, epoch)
 
